@@ -108,6 +108,11 @@ If you already have an open RQT you will find this plugin in section _Plugins ->
   <img src="https://user-images.githubusercontent.com/80155305/220293202-d1320648-719d-4e3c-a592-52e8607d3838.png" width="400" height="400"/><img src="https://user-images.githubusercontent.com/80155305/220293214-8e07c4ef-67fa-40c1-a562-7c97e81730ff.png" width="275" height="400"/>
 </p> 
 
+:warning: After pressing RESET button on the back of the robot, the RESET alarm will be set. This prevents you from using PointToPoint action server. To clear the alarm, run the following service call:
+```
+ros2 service call /dobot_alarm_clear_service dobot_msgs/srv/ExecuteAlarmClear
+```
+
 <a name="topics"></a>
 ## Published topics
 - `/joint_states` (sensor_msgs/msg/JointState) - angles values in the manipulator's joints 
