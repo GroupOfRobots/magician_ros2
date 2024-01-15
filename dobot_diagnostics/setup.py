@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'alarms_parser = dobot_diagnostics.alarms_parser:main',
+            'alarm_clear = dobot_alarm_clear.alarm_clear:main'
         ],
     },
 )

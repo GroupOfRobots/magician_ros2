@@ -3,6 +3,7 @@
 import launch
 import launch_ros.actions
 from ament_index_python.packages import get_package_share_path
+from launch_ros.actions import Node
 
 
 
@@ -28,4 +29,9 @@ def generate_launch_description():
                 target_action=aggregator,
                 on_exit=[launch.actions.EmitEvent(event=launch.events.Shutdown())],
             )),
+        Node(
+            package='dobot_diagnostics',
+            executable='alarm_clear',
+            output='screen',
+        ),
     ])
