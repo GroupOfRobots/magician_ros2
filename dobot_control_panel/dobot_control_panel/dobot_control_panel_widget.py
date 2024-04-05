@@ -22,7 +22,7 @@ from geometry_msgs.msg import PoseStamped
 import math
 import tf_transformations
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Float64MultiArray
 from dobot_msgs.msg import GripperStatus
 import sys
 
@@ -35,10 +35,10 @@ class DobotControlPanel(QWidget):
 
         super(DobotControlPanel, self).__init__()
 
-        shell_cmd = subprocess.Popen('lsusb | grep "Silicon Labs CP210x UART Bridge" ', shell=True, stdout=subprocess.PIPE)
+        shell_cmd = subprocess.Popen('lsusb | grep -E "Silicon Labs CP210x UART Bridge|Qinheng Electronics" ', shell=True, stdout=subprocess.PIPE)
         is_connected = shell_cmd.stdout.read().decode('utf-8')
         if not is_connected:
-            sys.exit("Dobot is disconnected!")
+            sys.exit("Dobot is disconnected! Check if the USB cable and power adapter are plugged in.")
 
 
         self._node = node
@@ -52,8 +52,8 @@ class DobotControlPanel(QWidget):
 
 
         self.subscription_TCP = self._node.create_subscription(
-            PoseStamped,
-            'dobot_TCP',
+            Float64MultiArray,
+            'dobot_pose_raw',
             self.tcp_position_callback,
             10)
 
@@ -165,14 +165,10 @@ class DobotControlPanel(QWidget):
 
 
     def tcp_position_callback(self, msg):
-        self.XPoseLCD.setText(str(round((msg.pose.position.x)*1000, 3)))
-        self.YPoseLCD.setText(str(round((msg.pose.position.y)*1000, 3)))
-        self.ZPoseLCD.setText(str(round((msg.pose.position.z)*1000, 3)))
-
-        quat = (msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w)
-        _, _, y = tf_transformations.euler_from_quaternion(quat)
-
-        self.RPoseLCD.setText(str(round((math.degrees(y)), 3)))
+        self.XPoseLCD.setText(str(round((msg.data[0])*1000, 3)))
+        self.YPoseLCD.setText(str(round((msg.data[1])*1000, 3)))
+        self.ZPoseLCD.setText(str(round((msg.data[2])*1000, 3)))
+        self.RPoseLCD.setText(str(round((msg.data[3]), 3)))
 
 
     def joints_positions_callback(self, msg):
