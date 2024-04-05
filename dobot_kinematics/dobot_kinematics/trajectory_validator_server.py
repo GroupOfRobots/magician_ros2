@@ -32,8 +32,8 @@ class PoseValidatorService(Node):
         self.max_velocity = 115 #TODO [mm/s]
         self.axis_1_range = {"min": -125, "max": 125}
         self.axis_2_range = {"min": -5, "max": 90}
-        self.axis_3_range = {"min": -15, "max": 60}
-        self.axis_4_range = {"min": -150, "max": 150}
+        self.axis_3_range = {"min": -15, "max": 90} # Actually -15 to 90 is possible
+        self.axis_4_range = {"min": -180, "max": 180} # Actually -180 to 180 is possible
 
         self.path_to_collision_model = None
 
@@ -52,12 +52,12 @@ class PoseValidatorService(Node):
         # Axis 3
         self.declare_parameter('axis_3_range', rclpy.Parameter.Type.INTEGER_ARRAY, 
         ParameterDescriptor(description = "The range of allowed values for the joint angle of the third axis.", 
-        additional_constraints = "The value must be between -15 and 70 degrees."))
+        additional_constraints = "The value must be between -15 and 90 degrees."))
 
         # Axis 4 
         self.declare_parameter('axis_4_range', rclpy.Parameter.Type.INTEGER_ARRAY, 
         ParameterDescriptor(description = "The range of allowed values for the joint angle of the fourth axis.", 
-        additional_constraints = "The value must be between -150 and 150 degrees."))
+        additional_constraints = "The value must be between -180 and 180 degrees."))
 
         # Additional parameters used for collision detection
 
@@ -106,34 +106,26 @@ class PoseValidatorService(Node):
 
 
 
-    def are_angles_in_range_joint(self, angles):
-        if (self.axis_1_range["min"] < angles[0] < self.axis_1_range["max"]) and \
-           (self.axis_2_range["min"] < angles[1] < self.axis_2_range["max"]) and \
-           (self.axis_3_range["min"] < angles[2] < self.axis_3_range["max"]) and \
-           (self.axis_4_range["min"] < angles[3] < self.axis_4_range["max"]):
-           return True
-        return False
-    
-    def are_angles_in_range_cartesian(self, angles, position):
-        JT1 = math.degrees(math.atan2(position[1],position[0]))
-        JT2 = angles[1]
-        if JT2 <= 40:
-            offset = 0
-        elif JT2 > 40:
-            offset = JT2 - 40
-        if (self.axis_1_range["min"] < angles[0] < self.axis_1_range["max"]) and \
-           (self.axis_2_range["min"] < angles[1] < self.axis_2_range["max"]) and \
-           (self.axis_3_range["min"] + offset < angles[2] < self.axis_3_range["max"]) and \
-           (self.axis_4_range["min"] + JT1 < angles[3] < self.axis_4_range["max"] + JT1):
-           return True
-        return False
+    def are_angles_in_range(self, angles):
+            if (self.axis_1_range["min"] < angles[0] < self.axis_1_range["max"]) and \
+            (self.axis_2_range["min"] < angles[1] < self.axis_2_range["max"]) and \
+            (self.axis_3_range["min"] < angles[2] < self.axis_3_range["max"]) and \
+            (self.axis_4_range["min"] < angles[3] < self.axis_4_range["max"]):
+                axis_3_parallelogram_limit_min = max(angles[1] - 55, -15)
+                axis_3_parallelogram_limit_max = min(angles[1] + 70, 90)
+                axis_4_rotated_limit_min = angles[0] - 150
+                axis_4_rotated_limit_max = angles[0] + 150
+                if (axis_3_parallelogram_limit_min < angles[2] < axis_3_parallelogram_limit_max) and \
+                (axis_4_rotated_limit_min < angles[3] < axis_4_rotated_limit_max):
+                    return True
+            return False
 
 
     def is_target_valid(self, target, target_type):
 
         # Target expressed in joint coordinates
         if target_type == 4:
-            in_limit = self.are_angles_in_range_joint(target)
+            in_limit = self.are_angles_in_range(angles)
             if in_limit == False:
                 return (False, 'Joint limits violated')
             # is_trajectory_safe = self.collision_server.validate_trajectory(motion_type = target_type, current_pose = self.dobot_pose, target_point = target, detect_ground = self.prevent_collision_with_ground)
@@ -154,7 +146,7 @@ class PoseValidatorService(Node):
                 angles = calc_inv_kin(*point)
                 if angles == False:
                     return (False, 'Inv Kin solving error!')
-                in_limit = self.are_angles_in_range_joint(angles)
+                in_limit = self.are_angles_in_range(angles)
                 if in_limit == False:
                     return (False, 'Joint limits violated')
             # is_trajectory_safe = self.collision_server.validate_trajectory(motion_type = target_type, current_pose = self.dobot_pose, target_point = cartesian_target_list, detect_ground = self.prevent_collision_with_ground)
@@ -169,7 +161,7 @@ class PoseValidatorService(Node):
             angles = calc_inv_kin(*target)
             if angles == False:
                 return (False, 'Inv Kin solving error!')
-            in_limit = self.are_angles_in_range_cartesian(angles, target)
+            in_limit = self.are_angles_in_range(angles)
             if in_limit == False:
                 return (False, 'Joint limits violated')
             # is_trajectory_safe = self.collision_server.validate_trajectory(motion_type = target_type, current_pose = self.dobot_pose, target_point = target, detect_ground = self.prevent_collision_with_ground)
@@ -187,7 +179,7 @@ class PoseValidatorService(Node):
                 angles = calc_inv_kin(*point)
                 if angles == False:
                     return (False, 'Inv Kin solving error!')
-                in_limit = self.are_angles_in_range_cartesian(angles, target)
+                in_limit = self.are_angles_in_range(angles)
                 if in_limit == False:
                     return (False, 'Joint limits violated')
             # is_trajectory_safe = self.collision_server.validate_trajectory(motion_type = target_type, current_pose = self.dobot_pose, target_point = target, detect_ground = self.prevent_collision_with_ground)
