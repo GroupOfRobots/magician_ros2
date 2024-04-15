@@ -4,7 +4,6 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import PoseStamped 
 import tf_transformations
 from geometry_msgs.msg import TransformStamped
-from tf2_ros import TransformBroadcaster
 import math
 from contextlib import suppress
 from dobot_msgs.msg import GripperStatus, DobotAlarmCodes
@@ -18,7 +17,6 @@ class DobotPublisher(Node):
     def __init__(self):
         super().__init__('dobot_state_publisher')
         self.publisher_joints = self.create_publisher(JointState, 'dobot_joint_states', 10)
-        self.publisher_joints_rviz = self.create_publisher(JointState, 'joint_states', 10)
         self.publisher_TCP = self.create_publisher(PoseStamped, 'dobot_TCP', 10)
         self.publisher_pose_raw = self.create_publisher(Float64MultiArray, 'dobot_pose_raw', 10)
         self.publisher_alarms = self.create_publisher(DobotAlarmCodes, 'dobot_alarms', 10)
@@ -27,7 +25,6 @@ class DobotPublisher(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         timer_period_alarms = 0.1 # 100ms = 10 Hz
         self.timer_alarms = self.create_timer(timer_period_alarms, self.timer_callback_alarms)
-        self.br = TransformBroadcaster(self)
         self.gripper_width = 0.0
         self.RAIL_IN_USE = False
 
@@ -88,7 +85,6 @@ class DobotPublisher(Node):
             joint_state.name = ['magician_joint_1', 'magician_joint_2', 'magician_joint_3', 'magician_joint_4', 'magician_joint_prismatic_l']
             joint_state.position = [math.radians(theta1), math.radians(theta2), math.radians(theta3 - theta2), math.radians(theta4), self.gripper_width]
             # self.get_logger().info("JT1:{0} JT2:{1} JT3:{2} JT4:{3}".format(theta1, theta2, theta3, theta4))
-            self.publisher_joints_rviz.publish(joint_state)
             joint_state.position = [math.radians(theta1), math.radians(theta2), math.radians(theta3), math.radians(theta4), self.gripper_width]
             self.publisher_joints.publish(joint_state)
 
@@ -106,24 +102,6 @@ class DobotPublisher(Node):
             dobot_TCP.pose.orientation.w = q[3]
             self.publisher_TCP.publish(dobot_TCP)
             ####################################################
-
-            t = TransformStamped()
-            t.header.stamp = self.get_clock().now().to_msg()
-            t.header.frame_id = 'magician_base_link'
-            t.child_frame_id = 'TCP'
-            t.transform.translation.x = x/1000
-            t.transform.translation.y = y/1000
-            t.transform.translation.z = z/1000
-
-            # self.get_logger().info("x:{0} y:{1} z:{2} r:{3}".format(x/1000, y/1000, z/1000, r))
-
-            q = tf_transformations.quaternion_from_euler(0, 0, r * math.pi/180)
-            t.transform.rotation.x = q[0]
-            t.transform.rotation.y = q[1]
-            t.transform.rotation.z = q[2]
-            t.transform.rotation.w = q[3]
-
-            self.br.sendTransform(t)
 
             if self.RAIL_IN_USE == True:
                 dobot_rail_pose = Float64()
