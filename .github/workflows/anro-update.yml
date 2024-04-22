@@ -1,0 +1,67 @@
+name: Update ANRO Branch
+
+on:
+  push:
+    branches:
+      - fszyszko2
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout fszyszko2 branch
+      uses: actions/checkout@v4
+      with:
+        ref: fszyszko2
+
+    - name: Checkout ANRO-system
+      uses: actions/checkout@v4
+      with:
+        ref: ANRO-system
+
+    - name: Set user email and name
+      run: |
+        git config user.email "01168917@pw.edu.pl"
+        git config user.name "yRagax"
+
+    - name: Start merge
+      run: |
+        git merge origin/fszyszko2 --allow-unrelated-histories || true
+
+    - name: Resolve merge conflicts
+      run: |
+        git checkout --theirs .github/**
+        git checkout --theirs dobot_bringup/**
+        git checkout --theirs dobot_control_panel/**
+        git checkout --theirs dobot_diagnostics/**
+        git checkout --theirs dobot_driver/**
+        git checkout --theirs dobot_end_effector/**
+        git checkout --theirs dobot_homing/**
+        git checkout --theirs dobot_kinematics/**
+        git checkout --theirs dobot_motion/**
+        git checkout --theirs dobot_msgs/**
+        git checkout --theirs dobot_state_updater/setup.py
+        git checkout --theirs dobot_state_updater/setup.cfg
+        git checkout --theirs dobot_state_updater/package.xml
+        git checkout --theirs dobot_state_updater/test/**
+        git checkout --theirs dobot_state_updater/resource/**
+        git checkout --theirs dobot_state_updater/dobot_state_updater/__init__.py
+        git checkout --ours dobot_state_updater/dobot_state_updater/dobot_state_publ.py
+        git checkout --theirs LICENSE
+        git checkout --theirs README.md
+        git checkout --theirs requirements.txt
+
+    - name: Remove files
+      run: |
+        git rm -rf dobot_demos || true
+        git rm -rf dobot_description || true
+        git rm -rf dobot_visualization_tools || true
+
+    - name: Finish merge
+      run: |
+        git add .
+        git commit -m "merge"
+
+    - name: Push changes to ANRO-system
+      run: git push origin ANRO-system --force
