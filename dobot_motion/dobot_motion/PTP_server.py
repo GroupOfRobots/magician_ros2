@@ -12,6 +12,7 @@ import tf_transformations
 from dobot_driver.dobot_handle import bot
 from .PTP_params_class import declare_PTP_params
 from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.srv import GetParameters
 from threading import Thread
 from dobot_msgs.srv import EvaluatePTPTrajectory
 from dobot_msgs.msg import DobotAlarmCodes
@@ -55,6 +56,13 @@ class DobotPTPServer(Node):
                                                         callback_group=ReentrantCallbackGroup())
         while not self.client_validate_goal.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Trajectory validation service not available, waiting again...')
+
+
+        self.client_homing_status = self.create_client(srv_type = GetParameters,
+                                                       srv_name = 'get_homing_status',
+                                                       callback_group=ReentrantCallbackGroup())
+        while not self.client_homing_status.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Homing status service not available, waiting again...')
 
 
         self.motion_type = None 
@@ -168,6 +176,15 @@ class DobotPTPServer(Node):
         return self.future.result()
 
 
+    def send_request_homing_status(self):
+        request = GetParameters.Request()
+        request.names = ['homing_status']
+        future = self.client_homing_status.call_async(request)
+        while not future.done():
+            pass
+        return future.result()
+
+
     def joints_positions_callback(self, msg):
         if self.motion_type in [3, 4, 5, 6]:
             self.dobot_pose = [math.degrees(msg.position[0]), math.degrees(msg.position[1]), math.degrees(msg.position[2]), math.degrees(msg.position[3])]
@@ -208,6 +225,14 @@ class DobotPTPServer(Node):
         if self.active_alarms:
             self.get_logger().warn("Goal rejected because of active alarms (LED diode in the robot base lights up red)")
             return GoalResponse.REJECT
+
+
+        # Check if homing is finished
+        homing_status_response = self.send_request_homing_status()
+        if homing_status_response.values[0].string_value != 'finished':
+            self.get_logger().warn("Goal rejected because homing has not been performed")
+            return GoalResponse.REJECT
+
 
         validation_response = self.send_request_check_trajectory(self.target, self.motion_type)
         if validation_response.is_valid == False:
