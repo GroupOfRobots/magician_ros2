@@ -3,6 +3,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 from ament_index_python.packages import get_package_share_directory
+from launch.actions import LogInfo
 
 def generate_launch_description():
 
@@ -13,6 +14,8 @@ def generate_launch_description():
         )
 
     return LaunchDescription([
+        LogInfo(msg='Starting PointToPoint action server.'),
+        LogInfo(msg='Setting speed and acceleration values.'),
         Node(
             package='dobot_motion',
             executable='PTP_server',
