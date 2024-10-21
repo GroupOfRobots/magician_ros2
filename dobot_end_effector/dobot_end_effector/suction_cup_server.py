@@ -41,9 +41,12 @@ def main(args=None):
 
     minimal_service = SuctionCupService()
 
-    rclpy.spin(minimal_service)
-
-    rclpy.shutdown()
+    try:
+        rclpy.spin(minimal_service)
+    except (KeyboardInterrupt):
+        pass
+    finally:
+        minimal_service.destroy_node()
 
 
 if __name__ == '__main__':

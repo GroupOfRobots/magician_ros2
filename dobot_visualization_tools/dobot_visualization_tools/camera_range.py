@@ -73,10 +73,12 @@ def main(args=None):
 
     minimal_publisher = FOVPublisher()
 
-    rclpy.spin(minimal_publisher)
-
-    minimal_publisher.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(minimal_publisher)
+    except (KeyboardInterrupt):
+        pass
+    finally:
+        minimal_publisher.destroy_node()
 
 
 if __name__ == '__main__':

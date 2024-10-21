@@ -203,10 +203,12 @@ def main(args=None):
     # Use a MultiThreadedExecutor to enable processing goals concurrently
     executor = MultiThreadedExecutor()
 
-    rclpy.spin(minimal_action_server, executor=executor)
-
-    minimal_action_server.destroy()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(minimal_action_server, executor=executor)
+    except (KeyboardInterrupt):
+        pass
+    finally:
+        minimal_action_server.destroy_node()
 
 
 if __name__ == '__main__':
