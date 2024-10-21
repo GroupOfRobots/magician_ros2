@@ -3,6 +3,7 @@
 import launch
 import launch_ros.actions
 from ament_index_python.packages import get_package_share_path
+from launch.actions import LogInfo
 
 
 
@@ -16,7 +17,9 @@ def generate_launch_description():
         package='diagnostic_aggregator',
         executable='aggregator_node',
         output='screen',
-        parameters=[analyzer_params_filepath])
+        parameters=[analyzer_params_filepath],
+        arguments=['--ros-args', '--log-level', 'warn']
+        )
     diag_publisher = launch_ros.actions.Node(
         package='dobot_diagnostics',
         executable='alarms_parser')
@@ -25,6 +28,7 @@ def generate_launch_description():
             executable='alarm_clear',
             output='screen')
     return launch.LaunchDescription([
+        LogInfo(msg='Starting the diagnostics module.'),
         aggregator,
         diag_publisher,
         alarm_clear_srv,

@@ -1,10 +1,12 @@
 import os, sys, subprocess
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import LogInfo, RegisterEventHandler, TimerAction, ExecuteProcess
+from launch.actions import LogInfo, RegisterEventHandler, TimerAction, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessStart, OnShutdown
-from launch.substitutions import LocalSubstitution, PythonExpression
+from launch.substitutions import LocalSubstitution, PythonExpression, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
@@ -48,14 +50,16 @@ def generate_launch_description():
         condition = IfCondition(PythonExpression(valid_tool))
     )
 
-    alarms =ExecuteProcess(
-        cmd=[[
-            'ros2 ', 'launch ', 'dobot_diagnostics ', 'alarms_analyzer.launch.py'
-        ]],
-        shell=True,
-        output='log',
-        condition = IfCondition(PythonExpression(valid_tool))
-    )
+    alarms = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('dobot_diagnostics'),
+                    'launch',
+                    'alarms_analyzer.launch.py'
+                ])
+            ]),
+            condition = IfCondition(PythonExpression(valid_tool))
+        )
 
     gripper = Node(
         package='dobot_end_effector',
@@ -71,30 +75,36 @@ def generate_launch_description():
         condition = IfCondition(PythonExpression(valid_tool))
     )
 
-    homing =ExecuteProcess(
-        cmd=[[
-            'ros2 ', 'launch ', 'dobot_homing ', 'dobot_homing.launch.py'
-        ]],
-        shell=True,
-        output='screen',
+    homing = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('dobot_homing'),
+                    'launch',
+                    'dobot_homing.launch.py'
+                ])
+            ]),
+            condition = IfCondition(PythonExpression(valid_tool))
+        )
+
+    trajectory_validator = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('dobot_kinematics'),
+                'launch',
+                'dobot_validate_trajectory.launch.py'
+            ])
+        ]),
         condition = IfCondition(PythonExpression(valid_tool))
     )
-
-    trajectory_validator =ExecuteProcess(
-        cmd=[[
-            'ros2 ', 'launch ', 'dobot_kinematics ', 'dobot_validate_trajectory.launch.py'
-        ]],
-        shell=True,
-        output='screen',
-        condition = IfCondition(PythonExpression(valid_tool))
-    )
-
-    PTP_action =ExecuteProcess(
-        cmd=[[
-            'ros2 ', 'launch ', 'dobot_motion ', 'dobot_PTP.launch.py'
-        ]],
-        shell=True,
-        output='screen',
+    
+    PTP_action = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('dobot_motion'),
+                'launch',
+                'dobot_PTP.launch.py'
+            ])
+        ]),
         condition = IfCondition(PythonExpression(valid_tool))
     )
 
@@ -119,15 +129,6 @@ def generate_launch_description():
         )
     )
 
-    alarms_event = RegisterEventHandler(
-        OnProcessStart(
-            target_action=alarms,
-            on_start=[
-                LogInfo(msg='Starting the diagnostics module.')
-            ]
-        )
-    )
-
     gripper_event = RegisterEventHandler(
         OnProcessStart(
             target_action=gripper,
@@ -142,35 +143,6 @@ def generate_launch_description():
             target_action=suction_cup,
             on_start=[
                 LogInfo(msg='Suction Cup control service started.')
-            ]
-        )
-    )
-
-    homing_event = RegisterEventHandler(
-        OnProcessStart(
-            target_action=homing,
-            on_start=[
-                LogInfo(msg='Starting homing service.'),
-                LogInfo(msg='Loading homing parameters.')
-            ]
-        )
-    )
-
-    trajectory_validator_event = RegisterEventHandler(
-        OnProcessStart(
-            target_action=trajectory_validator,
-            on_start=[
-                LogInfo(msg='Strating trajectory validator service.'),
-                LogInfo(msg='Loading kinematics parameters.')
-            ]
-        )
-    )
-    PTP_action_event = RegisterEventHandler(
-        OnProcessStart(
-            target_action=PTP_action,
-            on_start=[
-                LogInfo(msg='Starting PointToPoint action server.'),
-                LogInfo(msg='Setting speed and acceleration values.')
             ]
         )
     )
@@ -249,12 +221,8 @@ def generate_launch_description():
 
     return LaunchDescription([
         tool_null_event,
-        alarms_event,
         gripper_event,
         suction_cup_event,
-        homing_event,
-        trajectory_validator_event,
-        PTP_action_event,
         robot_state_event,
         tool_null_sched,
         alarms_sched,
