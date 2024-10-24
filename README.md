@@ -77,7 +77,7 @@ sudo usermod -a -G dialout <username>
 # Relogin or reboot required!
 ```
 
-:warning: The USB port to which Dobot Magician is connected is set by default to **/dev/ttyUSB0** - you can change it in [this file](./dobot_driver/dobot_driver/dobot_handle.py). 
+:warning: The USB port to which Dobot Magician is connected is determined automatically.
 
 <a name="running"></a>
 ## System startup :robot:
