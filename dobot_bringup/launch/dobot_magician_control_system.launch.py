@@ -14,15 +14,14 @@ def generate_launch_description():
 
     # -----------------------------------------------------------------------------------------------------------------
     # Check if the robot is physically connected
-    os.environ['MAGICIAN_TTYUSB_PORT'] = 'none'
+    os.environ['MAGICIAN_USB_DEVICE_PATH'] = 'none'
     ports = serial.tools.list_ports.comports()
 
     for port in ports:
         if port.manufacturer == 'Silicon Labs':
-            os.environ['MAGICIAN_TTYUSB_PORT'] = port.device
             os.environ['MAGICIAN_USB_DEVICE_PATH'] = port.usb_device_path
 
-    if os.environ['MAGICIAN_TTYUSB_PORT'] == 'none':
+    if os.environ['MAGICIAN_USB_DEVICE_PATH'] == 'none':
         sys.exit("Dobot is disconnected! Check if the USB cable and power adapter are plugged in.")
     # -----------------------------------------------------------------------------------------------------------------
 
