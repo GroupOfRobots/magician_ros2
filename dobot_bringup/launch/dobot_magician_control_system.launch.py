@@ -1,4 +1,5 @@
-import os, sys, subprocess
+import os, sys
+import serial.tools.list_ports
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import LogInfo, RegisterEventHandler, TimerAction, IncludeLaunchDescription
@@ -13,10 +14,15 @@ def generate_launch_description():
 
     # -----------------------------------------------------------------------------------------------------------------
     # Check if the robot is physically connected
+    os.environ['MAGICIAN_TTYUSB_PORT'] = 'none'
+    ports = serial.tools.list_ports.comports()
 
-    shell_cmd = subprocess.Popen('lsusb | grep -E "Silicon Labs CP210x UART Bridge|QinHeng Electronics" ', shell=True, stdout=subprocess.PIPE)
-    is_connected = shell_cmd.stdout.read().decode('utf-8')
-    if not is_connected:
+    for port in ports:
+        if port.manufacturer == 'Silicon Labs':
+            os.environ['MAGICIAN_TTYUSB_PORT'] = port.device
+            os.environ['MAGICIAN_USB_DEVICE_PATH'] = port.usb_device_path
+
+    if os.environ['MAGICIAN_TTYUSB_PORT'] == 'none':
         sys.exit("Dobot is disconnected! Check if the USB cable and power adapter are plugged in.")
     # -----------------------------------------------------------------------------------------------------------------
 
