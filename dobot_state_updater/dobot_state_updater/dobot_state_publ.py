@@ -52,7 +52,7 @@ class DobotPublisher(Node):
         return True
 
     def timer_callback_alarms(self):
-        with suppress(ValueError, TypeError):
+        with suppress(ValueError, TypeError, OSError):
             alarms_array = bot.get_alarms_state()
             # self.get_logger().info("Raw alarms:  {0}".format(alarms_array))
             if (self.RAIL_IN_USE == True) and (isinstance(alarms_array, float)):
@@ -75,7 +75,7 @@ class DobotPublisher(Node):
 
     def timer_callback(self):
 
-        with suppress(ValueError, TypeError):
+        with suppress(ValueError, TypeError, OSError):
             [x, y, z, r, theta1, theta2, theta3, theta4] = bot.get_pose()
 
             msg = Float64MultiArray()

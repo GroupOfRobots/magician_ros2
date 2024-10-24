@@ -20,6 +20,7 @@ def generate_launch_description():
     for port in ports:
         if port.manufacturer == 'Silicon Labs':
             os.environ['MAGICIAN_TTYUSB_PORT'] = port.device
+            os.environ['MAGICIAN_USB_DEVICE_PATH'] = port.usb_device_path
 
     if os.environ['MAGICIAN_TTYUSB_PORT'] == 'none':
         sys.exit("Dobot is disconnected! Check if the USB cable and power adapter are plugged in.")
