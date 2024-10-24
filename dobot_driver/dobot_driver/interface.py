@@ -1,17 +1,23 @@
 import serial
+import serial.tools.list_ports
 import threading
 import sys
 
 from dobot_driver.message import Message
 
 class Interface:
-    def __init__(self, port):
+    def __init__(self):
         threading.Thread.__init__(self)
         self.lock = threading.Lock()
 
         try:
+            magician_port = None
+            for port in serial.tools.list_ports.comports():
+                if port.manufacturer == 'Silicon Labs':
+                    magician_port = port.device
+
             self.serial = serial.Serial(
-                port=port,
+                port=magician_port,
                 baudrate=115200,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
