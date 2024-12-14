@@ -23,9 +23,9 @@ class DobotPublisher(Node):
         self.publisher_pose_raw = self.create_publisher(Float64MultiArray, 'dobot_pose_raw', 10)
         self.publisher_alarms = self.create_publisher(DobotAlarmCodes, 'dobot_alarms', 10)
         self.subscription = self.create_subscription(GripperStatus, 'gripper_status_rviz', self.listener_callback, 10)
-        timer_period = 0.05  # 50ms = 20Hz
+        timer_period = 0.25  # 250ms = 4Hz
         self.timer = self.create_timer(timer_period, self.timer_callback)
-        timer_period_alarms = 0.1 # 100ms = 10 Hz
+        timer_period_alarms = 2.0 # 2000ms = 0.5 Hz
         self.timer_alarms = self.create_timer(timer_period_alarms, self.timer_callback_alarms)
         self.br = TransformBroadcaster(self)
         self.gripper_width = 0.0
