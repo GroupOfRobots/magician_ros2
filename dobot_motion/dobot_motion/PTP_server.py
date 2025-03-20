@@ -90,6 +90,8 @@ class DobotPTPServer(Node):
 
         self.active_alarms = False
 
+        self._is_executing = False
+
 
         self.add_on_set_parameters_callback(self.parameters_callback)
 
@@ -218,31 +220,40 @@ class DobotPTPServer(Node):
 
     def goal_callback(self, goal_request):
         """Accept or reject a client request to begin an action."""
+
+        # Reject new goal if another is being processed
+        if self._is_executing:
+            self.get_logger().warn("Goal rejected because another goal is already being processed")
+            return GoalResponse.REJECT
+
+        self._is_executing = True
+
         self.target = goal_request.target_pose
         self.motion_type = goal_request.motion_type
 
-        # Check if there are active alarms (if the LED diode lights up red) 
+        # Check for active alarms
         if self.active_alarms:
             self.get_logger().warn("Goal rejected because of active alarms (LED diode in the robot base lights up red)")
+            self._is_executing = False
             return GoalResponse.REJECT
-
 
         # Check if homing is finished
         homing_status_response = self.send_request_homing_status()
         if homing_status_response.values[0].string_value != 'finished':
             self.get_logger().warn("Goal rejected because homing has not been performed")
+            self._is_executing = False
             return GoalResponse.REJECT
 
-
+        # Validate trajectory
         validation_response = self.send_request_check_trajectory(self.target, self.motion_type)
-        if validation_response.is_valid == False:
+        if not validation_response.is_valid:
             self.get_logger().warn("Goal rejected: {0}".format(validation_response))
+            self._is_executing = False
             return GoalResponse.REJECT
 
         self.get_logger().info("Result of calling validation service: is valid? {0}, description: {1}".format(validation_response.is_valid, validation_response.message))
 
-
-
+        # Validate ratios
         if DobotPTPServer.is_ratio_valid(goal_request.velocity_ratio) and DobotPTPServer.is_ratio_valid(goal_request.acceleration_ratio):
             vel_ratio = int(goal_request.velocity_ratio * 100)
             acc_ratio = int(goal_request.acceleration_ratio * 100)
@@ -251,18 +262,24 @@ class DobotPTPServer(Node):
             bot.set_point_to_point_common_params(vel_ratio, acc_ratio)
         else:
             self.get_logger().info('Wrong ratio in action goal field')
+            self._is_executing = False
             return GoalResponse.REJECT
 
+        # Wait for mode acknowledgment
         while not self.mode_ACK:
             pass
+
         self.get_logger().info('Goal: {0}'.format(self.target))
         self.get_logger().info('Mode: {0}'.format(self.motion_type))
         self.get_logger().info('Received goal request')
+
         if self.motion_type in self.motion_types_list:
-            return GoalResponse.ACCEPT 
+            return GoalResponse.ACCEPT
         else:
             self.get_logger().info('The motion mode you specified does not exist!')
-            return GoalResponse.REJECT
+        self._is_executing = False
+        return GoalResponse.REJECT
+
 
     def cancel_callback(self, goal_handle):
         """Accept or reject a client request to cancel an action."""
@@ -305,6 +322,7 @@ class DobotPTPServer(Node):
                 bot.start_queue()
                 self.get_logger().info('Goal canceled')
                 result.achieved_pose  = self.dobot_pose
+                self._is_executing = False
                 return result
 
 
@@ -327,6 +345,8 @@ class DobotPTPServer(Node):
         result.achieved_pose  = self.dobot_pose
 
         self.get_logger().info('Returning result: {0}'.format(result.achieved_pose))
+
+        self._is_executing = False
 
         return result
 
