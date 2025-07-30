@@ -13,55 +13,39 @@ jobs:
     - name: Checkout fszyszko2 branch
       uses: actions/checkout@v4
       with:
-        ref: fszyszko2
-
-    - name: Checkout ANRO-system
-      uses: actions/checkout@v4
-      with:
-        ref: ANRO-system
+        fetch-depth: 0
 
     - name: Set user email and name
       run: |
         git config user.email "01168917@pw.edu.pl"
         git config user.name "yRagax"
 
-    - name: Start merge
-      run: |
-        git merge origin/fszyszko2 --allow-unrelated-histories || true
+    - name: Fetch all branches
+      run: git fetch origin ANRO-system || echo "No ANRO-system branch yet"
 
-    - name: Resolve merge conflicts
+    - name: Create ANRO-system from fszyszko2
       run: |
-        git checkout --theirs .github/**
-        git checkout --theirs dobot_bringup/**
-        git checkout --theirs dobot_control_panel/**
-        git checkout --theirs dobot_diagnostics/**
-        git checkout --theirs dobot_driver/**
-        git checkout --theirs dobot_end_effector/**
-        git checkout --theirs dobot_homing/**
-        git checkout --theirs dobot_kinematics/**
-        git checkout --theirs dobot_motion/**
-        git checkout --theirs dobot_msgs/**
-        git checkout --theirs dobot_state_updater/setup.py
-        git checkout --theirs dobot_state_updater/setup.cfg
-        git checkout --theirs dobot_state_updater/package.xml
-        git checkout --theirs dobot_state_updater/test/**
-        git checkout --theirs dobot_state_updater/resource/**
-        git checkout --theirs dobot_state_updater/dobot_state_updater/__init__.py
-        git checkout --ours dobot_state_updater/dobot_state_updater/dobot_state_publ.py
-        git checkout --theirs LICENSE
-        git checkout --theirs README.md
-        git checkout --theirs requirements.txt
+        git checkout -B ANRO-system origin/fszyszko2
 
+    - name: Remove lines
+      run: |
+        sed -i '/from tf2_ros import TransformBroadcaster/d' dobot_state_updater/dobot_state_updater/dobot_state_publ.py
+        sed -i '/self\.publisher_joints_rviz = self\.create_publisher(JointState, '\''joint_states'\'', 10)/d' dobot_state_updater/dobot_state_updater/dobot_state_publ.py
+        sed -i '/self\.br = TransformBroadcaster(self)/d' dobot_state_updater/dobot_state_updater/dobot_state_publ.py
+        sed -i '/self\.publisher_joints_rviz\.publish(joint_state)/d' dobot_state_updater/dobot_state_updater/dobot_state_publ.py
+        sed -i '/self\.br\.sendTransform(t)/d' dobot_state_updater/dobot_state_updater/dobot_state_publ.py
+    
     - name: Remove files
       run: |
-        git rm -rf dobot_demos || true
-        git rm -rf dobot_description || true
-        git rm -rf dobot_visualization_tools || true
+        rm -rf dobot_demos
+        rm -rf dobot_description
+        rm -rf dobot_visualization_tools
 
-    - name: Finish merge
+    - name: Commit and push changes
       run: |
-        git add .
-        git commit -m "merge"
-
-    - name: Push changes to ANRO-system
-      run: git push origin ANRO-system --force
+        if ! git diff --quiet; then
+          git commit -am "Remove files and lines specific for ANRO lab classes"
+          git push origin ANRO-system --force
+        else
+          echo "No changes to commit"
+        fi
