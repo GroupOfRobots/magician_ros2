@@ -4,7 +4,6 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import PoseStamped 
 import tf_transformations
 from geometry_msgs.msg import TransformStamped
-from tf2_ros import TransformBroadcaster
 import math
 from contextlib import suppress
 from dobot_msgs.msg import GripperStatus, DobotAlarmCodes
@@ -18,7 +17,6 @@ class DobotPublisher(Node):
     def __init__(self):
         super().__init__('dobot_state_publisher')
         self.publisher_joints = self.create_publisher(JointState, 'dobot_joint_states', 10)
-        self.publisher_joints_rviz = self.create_publisher(JointState, 'joint_states', 10)
         self.publisher_TCP = self.create_publisher(PoseStamped, 'dobot_TCP', 10)
         self.publisher_pose_raw = self.create_publisher(Float64MultiArray, 'dobot_pose_raw', 10)
         self.publisher_alarms = self.create_publisher(DobotAlarmCodes, 'dobot_alarms', 10)
@@ -27,7 +25,6 @@ class DobotPublisher(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         timer_period_alarms = 2.0 # 2000ms = 0.5 Hz
         self.timer_alarms = self.create_timer(timer_period_alarms, self.timer_callback_alarms)
-        self.br = TransformBroadcaster(self)
         self.gripper_width = 0.0
         self.RAIL_IN_USE = False
 
@@ -88,7 +85,6 @@ class DobotPublisher(Node):
             joint_state.name = ['magician_joint_1', 'magician_joint_2', 'magician_joint_3', 'magician_joint_4', 'magician_joint_prismatic_l']
             joint_state.position = [math.radians(theta1), math.radians(theta2), math.radians(theta3 - theta2), math.radians(theta4), self.gripper_width]
             # self.get_logger().info("JT1:{0} JT2:{1} JT3:{2} JT4:{3}".format(theta1, theta2, theta3, theta4))
-            self.publisher_joints_rviz.publish(joint_state)
             joint_state.position = [math.radians(theta1), math.radians(theta2), math.radians(theta3), math.radians(theta4), self.gripper_width]
             self.publisher_joints.publish(joint_state)
 
@@ -123,7 +119,6 @@ class DobotPublisher(Node):
             t.transform.rotation.z = q[2]
             t.transform.rotation.w = q[3]
 
-            self.br.sendTransform(t)
 
             if self.RAIL_IN_USE == True:
                 dobot_rail_pose = Float64()
